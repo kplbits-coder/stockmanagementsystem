@@ -32,6 +32,20 @@ enum SaleStatus {
   REFUNDED
 }
 
+enum PaymentMethod {
+  CASH
+  CHEQUE
+  PHONEPAY
+  ESEWA
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+  FAILED
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
@@ -105,25 +119,46 @@ model Product {
 }
 
 model Sale {
-  id           String     @id @default(uuid())
-  invoiceNo    String     @unique
-  customerId   String?
-  customerName String?
+  id            String        @id @default(uuid())
+  invoiceNo     String        @unique
+  customerId    String?
+  customerName  String?
   customerPhone String?
-  userId       String
-  subtotal     Decimal    @db.Decimal(10, 2)
-  taxAmount    Decimal    @db.Decimal(10, 2)
-  discount     Decimal    @default(0) @db.Decimal(10, 2)
-  total        Decimal    @db.Decimal(10, 2)
-  status       SaleStatus @default(COMPLETED)
-  notes        String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  userId        String
+  subtotal      Decimal       @db.Decimal(10, 2)
+  taxAmount     Decimal       @db.Decimal(10, 2)
+  discount      Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  status        SaleStatus    @default(COMPLETED)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   user      User       @relation(fields: [userId], references: [id])
   saleItems SaleItem[]
+  payment   Payment?
 
   @@map("sales")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  saleId         String        @unique
+  method         PaymentMethod
+  status         PaymentStatus @default(PAID)
+  amountPaid     Decimal       @db.Decimal(10, 2)
+  changeAmount   Decimal       @default(0) @db.Decimal(10, 2)
+  referenceNo    String?       // cheque number / PhonePay / eSewa transaction ID
+  bankName       String?       // for cheque payments
+  accountName    String?       // account holder name for cheque
+  notes          String?
+  paidAt         DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
 }
 
 model SaleItem {

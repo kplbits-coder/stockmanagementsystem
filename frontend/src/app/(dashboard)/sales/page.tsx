@@ -167,6 +167,7 @@ export default function SalesPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Invoice</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Customer</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Cashier</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600">Payment</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Total</th>
                   <th className="text-center px-4 py-3 font-medium text-gray-600">Status</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
@@ -183,6 +184,25 @@ export default function SalesPage() {
                       {sale.customerName || 'Walk-in'}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{sale.user?.name}</td>
+                    <td className="px-4 py-3 text-center">
+                      {sale.payment ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          sale.payment.method === 'CASH'
+                            ? 'bg-green-100 text-green-700'
+                            : sale.payment.method === 'CHEQUE'
+                            ? 'bg-blue-100 text-blue-700'
+                            : sale.payment.method === 'PHONEPAY'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-teal-100 text-teal-700'
+                        }`}>
+                          {sale.payment.method === 'PHONEPAY' ? 'PhonePay' :
+                           sale.payment.method === 'ESEWA'    ? 'eSewa'    :
+                           sale.payment.method === 'CHEQUE'   ? 'Cheque'   : 'Cash'}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold">
                       {formatCurrency(sale.total)}
                     </td>

@@ -21,6 +21,13 @@ interface InvoiceData {
   discount: number;
   total: number;
   cashierName: string;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  amountPaid?: number;
+  changeAmount?: number;
+  referenceNo?: string;
+  bankName?: string;
+  accountName?: string;
 }
 
 export function generateInvoicePDF(data: InvoiceData, res: Response): void {
@@ -167,6 +174,58 @@ export function generateInvoicePDF(data: InvoiceData, res: Response): void {
     .font('Helvetica-Bold')
     .text('TOTAL:', totalsX, y + 3)
     .text(`$${data.total.toFixed(2)}`, 480, y + 3, { align: 'right', width: 65 });
+
+  // Payment info
+  if (data.paymentMethod) {
+    y += 40;
+    doc.moveTo(50, y).lineTo(545, y).strokeColor('#e5e7eb').stroke();
+    y += 12;
+
+    const methodLabel =
+      data.paymentMethod === 'PHONEPAY' ? 'PhonePay' :
+      data.paymentMethod === 'ESEWA'    ? 'eSewa' :
+      data.paymentMethod === 'CHEQUE'   ? 'Cheque' :
+      data.paymentMethod === 'CASH'     ? 'Cash' :
+      data.paymentMethod || 'Cash';
+    const statusLabel = data.paymentStatus
+      ? data.paymentStatus.charAt(0) + data.paymentStatus.slice(1).toLowerCase()
+      : 'Paid';
+
+    doc
+      .fillColor('#374151')
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text('Payment Details', 50, y);
+
+    y += 14;
+    doc.font('Helvetica').fontSize(9).fillColor('#6b7280');
+    doc.text(`Method: ${methodLabel}`, 50, y);
+    doc.text(`Status: ${statusLabel}`, 200, y);
+
+    if (data.amountPaid !== undefined) {
+      doc.text(`Amount Paid: $${data.amountPaid.toFixed(2)}`, 350, y);
+    }
+
+    if (data.changeAmount && data.changeAmount > 0) {
+      y += 14;
+      doc.text(`Change: $${data.changeAmount.toFixed(2)}`, 50, y);
+    }
+
+    if (data.referenceNo) {
+      y += 14;
+      doc.text(`Reference No: ${data.referenceNo}`, 50, y);
+    }
+
+    if (data.bankName) {
+      y += 14;
+      doc.text(`Bank: ${data.bankName}`, 50, y);
+    }
+
+    if (data.accountName) {
+      y += 14;
+      doc.text(`Account Name: ${data.accountName}`, 50, y);
+    }
+  }
 
   // Footer
   doc

@@ -39,6 +39,7 @@ export const getSales = async (req: Request, res: Response, next: NextFunction):
           saleItems: {
             include: { product: { select: { id: true, name: true, sku: true } } },
           },
+          payment: true,
         },
         skip,
         take: Number(limit),
@@ -71,6 +72,7 @@ export const getSaleById = async (req: Request, res: Response, next: NextFunctio
         saleItems: {
           include: { product: { select: { id: true, name: true, sku: true, unit: true } } },
         },
+        payment: true,
       },
     });
     if (!sale) return next(createError('Sale not found', 404));
@@ -82,7 +84,11 @@ export const getSaleById = async (req: Request, res: Response, next: NextFunctio
 
 export const createSale = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { customerName, customerPhone, items, discount = 0, notes } = req.body;
+    const {
+      customerName, customerPhone, items, discount = 0, notes,
+      paymentMethod = 'CASH', amountPaid, referenceNo,
+      bankName, accountName, paymentNotes,
+    } = req.body;
 
     if (!items || items.length === 0) {
       return next(createError('Sale must have at least one item', 400));
@@ -132,8 +138,10 @@ export const createSale = async (req: AuthRequest, res: Response, next: NextFunc
     }
 
     const total = subtotal + taxAmount - Number(discount);
+    const paid = Number(amountPaid ?? total);
+    const change = Math.max(0, paid - total);
 
-    // Create sale in transaction
+    // Create sale + payment in transaction
     const sale = await prisma.$transaction(async (tx) => {
       const newSale = await tx.sale.create({
         data: {
@@ -147,12 +155,25 @@ export const createSale = async (req: AuthRequest, res: Response, next: NextFunc
           total,
           notes: notes || null,
           saleItems: { create: saleItemsData },
+          payment: {
+            create: {
+              method: paymentMethod,
+              status: paid >= total ? 'PAID' : paid > 0 ? 'PARTIAL' : 'PENDING',
+              amountPaid: paid,
+              changeAmount: change,
+              referenceNo: referenceNo || null,
+              bankName: bankName || null,
+              accountName: accountName || null,
+              notes: paymentNotes || null,
+            },
+          },
         },
         include: {
           saleItems: {
             include: { product: { select: { id: true, name: true, sku: true } } },
           },
           user: { select: { id: true, name: true } },
+          payment: true,
         },
       });
 
@@ -250,6 +271,7 @@ export const downloadInvoice = async (req: Request, res: Response, next: NextFun
         saleItems: {
           include: { product: { select: { name: true } } },
         },
+        payment: true,
       },
     });
     if (!sale) return next(createError('Sale not found', 404));
@@ -261,6 +283,13 @@ export const downloadInvoice = async (req: Request, res: Response, next: NextFun
         customerName: sale.customerName || undefined,
         customerPhone: sale.customerPhone || undefined,
         cashierName: sale.user.name,
+        paymentMethod: sale.payment?.method,
+        paymentStatus: sale.payment?.status,
+        amountPaid: sale.payment ? Number(sale.payment.amountPaid) : undefined,
+        changeAmount: sale.payment ? Number(sale.payment.changeAmount) : undefined,
+        referenceNo: sale.payment?.referenceNo || undefined,
+        bankName: sale.payment?.bankName || undefined,
+        accountName: sale.payment?.accountName || undefined,
         items: sale.saleItems.map((item) => ({
           name: item.product.name,
           quantity: item.quantity,

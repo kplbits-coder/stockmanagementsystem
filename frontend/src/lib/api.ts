@@ -165,6 +165,22 @@ export const subCategoryApi = {
   },
 };
 
+// ─── Payments ────────────────────────────────────────────────────────────────
+export const paymentApi = {
+  getBySale: async (saleId: string) => {
+    const res = await api.get(`/payments/sale/${saleId}`);
+    return res.data;
+  },
+  update: async (saleId: string, data: any) => {
+    const res = await api.put(`/payments/sale/${saleId}`, data);
+    return res.data;
+  },
+  getSummary: async () => {
+    const res = await api.get('/payments/summary');
+    return res.data;
+  },
+};
+
 // ─── Reports ─────────────────────────────────────────────────────────────────
 export const reportApi = {
   getSales: async (period?: string) => {
