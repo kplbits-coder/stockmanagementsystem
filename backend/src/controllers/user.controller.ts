@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 
-export const getUsers = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const users = await prisma.user.findMany({
       select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
@@ -18,6 +19,7 @@ export const getUsers = async (_req: Request, res: Response, next: NextFunction)
 
 export const createUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { name, email, password, role } = req.body;
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -37,6 +39,7 @@ export const createUser = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const updateUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { name, role, isActive } = req.body;
     const user = await prisma.user.findUnique({ where: { id: req.params.id } });
     if (!user) return next(createError('User not found', 404));
@@ -59,6 +62,7 @@ export const updateUser = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const deleteUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     if (req.params.id === req.user!.id) {
       return next(createError('Cannot delete your own account', 400));
     }

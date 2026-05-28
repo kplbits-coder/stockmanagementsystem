@@ -27,7 +27,7 @@ export default function SalesReportChart({ data }: { data: CategoryData[] }) {
     labels: data.map((d) => d.category),
     datasets: [
       {
-        label: 'Revenue ($)',
+        label: 'Revenue (Rs.)',
         data: data.map((d) => d.revenue),
         backgroundColor: [
           'rgba(37, 99, 235, 0.8)',
@@ -48,7 +48,7 @@ export default function SalesReportChart({ data }: { data: CategoryData[] }) {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (ctx: any) => '$' + Number(ctx.raw).toFixed(2),
+          label: (ctx: any) => 'Rs. ' + Number(ctx.raw).toFixed(2),
         },
       },
     },
@@ -56,7 +56,7 @@ export default function SalesReportChart({ data }: { data: CategoryData[] }) {
       x: { grid: { display: false } },
       y: {
         grid: { color: '#f3f4f6' },
-        ticks: { callback: (v: any) => '$' + v },
+        ticks: { callback: (v: any) => 'Rs. ' + v },
       },
     },
   };

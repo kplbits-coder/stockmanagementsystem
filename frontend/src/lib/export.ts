@@ -134,8 +134,8 @@ export async function exportInventoryPDF(products: any[]): Promise<void> {
     rows: products.map((p) => [
       p.name, p.sku,
       p.category?.name || '',
-      '$' + Number(p.price).toFixed(2),
-      '$' + Number(p.costPrice).toFixed(2),
+      'Rs. ' + Number(p.price).toFixed(2),
+      'Rs. ' + Number(p.costPrice).toFixed(2),
       p.quantity, p.unit, p.status,
     ]),
     columnWidths: [0.22, 0.10, 0.14, 0.10, 0.10, 0.07, 0.07, 0.12],
@@ -145,7 +145,7 @@ export async function exportInventoryPDF(products: any[]): Promise<void> {
 export function exportSalesCSV(sales: any[]): void {
   exportToCSV('sales', [
     'Invoice No', 'Customer', 'Phone', 'Cashier',
-    'Subtotal ($)', 'Tax ($)', 'Discount ($)', 'Total ($)',
+    'Subtotal (Rs.)', 'Tax (Rs.)', 'Discount (Rs.)', 'Total (Rs.)',
     'Status', 'Date',
   ], sales.map((s) => [
     s.invoiceNo,
@@ -171,10 +171,10 @@ export async function exportSalesPDF(sales: any[], title = 'Sales Report'): Prom
       s.invoiceNo,
       s.customerName || 'Walk-in',
       s.user?.name || '',
-      '$' + Number(s.subtotal).toFixed(2),
-      '$' + Number(s.taxAmount).toFixed(2),
-      '$' + Number(s.discount).toFixed(2),
-      '$' + Number(s.total).toFixed(2),
+      'Rs. ' + Number(s.subtotal).toFixed(2),
+      'Rs. ' + Number(s.taxAmount).toFixed(2),
+      'Rs. ' + Number(s.discount).toFixed(2),
+      'Rs. ' + Number(s.total).toFixed(2),
       s.status,
       new Date(s.createdAt).toLocaleDateString(),
     ]),
@@ -185,8 +185,8 @@ export async function exportSalesPDF(sales: any[], title = 'Sales Report'): Prom
 export function exportSalesReportCSV(report: any, period: string): void {
   // Summary sheet
   exportToCSV(`sales-report-${period}`, [
-    'Period', 'Total Sales', 'Total Revenue ($)', 'Tax Collected ($)',
-    'Total Discount ($)', 'Net Revenue ($)',
+    'Period', 'Total Sales', 'Total Revenue (Rs.)', 'Tax Collected (Rs.)',
+    'Total Discount (Rs.)', 'Net Revenue (Rs.)',
   ], [[
     period,
     report.summary.totalSales,
@@ -199,7 +199,7 @@ export function exportSalesReportCSV(report: any, period: string): void {
 
 export function exportCategoryReportCSV(breakdown: any[]): void {
   exportToCSV('category-breakdown', [
-    'Category', 'Units Sold', 'Revenue ($)',
+    'Category', 'Units Sold', 'Revenue (Rs.)',
   ], breakdown.map((c) => [
     c.category, c.quantity, Number(c.revenue).toFixed(2),
   ]));
@@ -211,9 +211,9 @@ export async function exportInventoryReportPDF(report: any): Promise<void> {
     title: 'Inventory Valuation Report',
     subtitle: [
       `Products: ${report.summary.totalProducts}`,
-      `Stock Value: $${Number(report.summary.totalValue).toFixed(2)}`,
-      `Retail Value: $${Number(report.summary.totalRetailValue).toFixed(2)}`,
-      `Potential Profit: $${Number(report.summary.potentialProfit).toFixed(2)}`,
+      `Stock Value: Rs. ${Number(report.summary.totalValue).toFixed(2)}`,
+      `Retail Value: Rs. ${Number(report.summary.totalRetailValue).toFixed(2)}`,
+      `Potential Profit: Rs. ${Number(report.summary.potentialProfit).toFixed(2)}`,
     ].join('  ·  '),
     headers: ['Product', 'Category', 'SKU', 'Qty', 'Cost Price', 'Retail Price', 'Stock Value'],
     rows: report.products.map((p: any) => [
@@ -221,9 +221,9 @@ export async function exportInventoryReportPDF(report: any): Promise<void> {
       p.category?.name || '',
       p.sku,
       p.quantity,
-      '$' + Number(p.costPrice).toFixed(2),
-      '$' + Number(p.price).toFixed(2),
-      '$' + (Number(p.costPrice) * p.quantity).toFixed(2),
+      'Rs. ' + Number(p.costPrice).toFixed(2),
+      'Rs. ' + Number(p.price).toFixed(2),
+      'Rs. ' + (Number(p.costPrice) * p.quantity).toFixed(2),
     ]),
     columnWidths: [0.22, 0.14, 0.12, 0.07, 0.12, 0.12, 0.13],
   });

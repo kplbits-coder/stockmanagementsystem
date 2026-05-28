@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { generateInvoicePDF } from '../utils/invoice';
@@ -20,6 +20,7 @@ function computeStatus(quantity: number, minQuantity: number): StockStatus {
 
 export const getSales = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { page = '1', limit = '20', startDate, endDate, status } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -65,6 +66,7 @@ export const getSales = async (req: Request, res: Response, next: NextFunction):
 
 export const getSaleById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const sale = await prisma.sale.findUnique({
       where: { id: req.params.id },
       include: {
@@ -84,6 +86,7 @@ export const getSaleById = async (req: Request, res: Response, next: NextFunctio
 
 export const createSale = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const {
       customerName, customerPhone, items, discount = 0, notes,
       paymentMethod = 'CASH', amountPaid, referenceNo,
@@ -214,6 +217,7 @@ export const createSale = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const cancelSale = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const sale = await prisma.sale.findUnique({
       where: { id: req.params.id },
       include: { saleItems: true },
@@ -264,6 +268,8 @@ export const cancelSale = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const downloadInvoice = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
+    const tenantConfig = (req as any).tenantConfig;
     const sale = await prisma.sale.findUnique({
       where: { id: req.params.id },
       include: {
@@ -278,6 +284,9 @@ export const downloadInvoice = async (req: Request, res: Response, next: NextFun
 
     generateInvoicePDF(
       {
+        companyName: tenantConfig?.branding?.companyName || 'Stock Manager',
+        companyTagline: tenantConfig?.branding?.tagline || 'Stock Management System',
+        panNo: tenantConfig?.branding?.panNo || undefined,
         invoiceNo: sale.invoiceNo,
         date: sale.createdAt,
         customerName: sale.customerName || undefined,

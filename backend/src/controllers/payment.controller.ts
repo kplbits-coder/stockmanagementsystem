@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 
 export const getPaymentBySale = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const payment = await prisma.payment.findUnique({
       where: { saleId: req.params.saleId },
     });
@@ -17,6 +18,7 @@ export const getPaymentBySale = async (req: Request, res: Response, next: NextFu
 
 export const updatePayment = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { method, amountPaid, referenceNo, bankName, accountName, notes, status } = req.body;
 
     const payment = await prisma.payment.findUnique({ where: { saleId: req.params.saleId } });
@@ -48,8 +50,9 @@ export const updatePayment = async (req: AuthRequest, res: Response, next: NextF
   }
 };
 
-export const getPaymentSummary = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getPaymentSummary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const [cashTotal, chequeTotal, phonepayTotal, esewaTotal, breakdown] = await Promise.all([
       prisma.payment.aggregate({
         where: { method: 'CASH', status: 'PAID' },

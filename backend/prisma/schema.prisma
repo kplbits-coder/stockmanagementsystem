@@ -208,3 +208,81 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+// ─── Refrigerator Tracking (Scoopmandu) ──────────────────────────────────────
+
+model Refrigerator {
+  id               String             @id @default(uuid())
+  code             String             @unique
+  name             String
+  brand            String?
+  model            String?
+  capacity         String?
+  serialNumber     String?            @unique
+  purchaseDate     DateTime?
+  status           RefrigeratorStatus @default(AVAILABLE)
+  remarks          String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  assignments RefrigeratorAssignment[]
+  logs        RefrigeratorLog[]
+
+  @@map("refrigerators")
+}
+
+model Shop {
+  id            String   @id @default(uuid())
+  name          String
+  code          String   @unique
+  address       String?
+  contactPerson String?
+  phone         String?
+  region        String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  assignments RefrigeratorAssignment[]
+
+  @@map("shops")
+}
+
+model RefrigeratorAssignment {
+  id             String    @id @default(uuid())
+  refrigeratorId String
+  shopId         String
+  assignedDate   DateTime  @default(now())
+  returnedDate   DateTime?
+  status         String    @default("ACTIVE")
+  remarks        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  refrigerator Refrigerator @relation(fields: [refrigeratorId], references: [id])
+  shop         Shop         @relation(fields: [shopId], references: [id])
+
+  @@map("refrigerator_assignments")
+}
+
+model RefrigeratorLog {
+  id             String   @id @default(uuid())
+  refrigeratorId String
+  action         String
+  previousShop   String?
+  newShop        String?
+  performedBy    String?
+  remarks        String?
+  createdAt      DateTime @default(now())
+
+  refrigerator Refrigerator @relation(fields: [refrigeratorId], references: [id])
+
+  @@map("refrigerator_logs")
+}
+
+enum RefrigeratorStatus {
+  AVAILABLE
+  ASSIGNED
+  UNDER_MAINTENANCE
+  INACTIVE
+}

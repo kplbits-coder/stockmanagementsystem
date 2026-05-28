@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 
 export const getSubCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { categoryId } = req.query;
 
     const where: any = {};
@@ -27,6 +28,7 @@ export const getSubCategories = async (req: Request, res: Response, next: NextFu
 
 export const getSubCategoryById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const subCategory = await prisma.subCategory.findUnique({
       where: { id: req.params.id },
       include: {
@@ -48,6 +50,7 @@ export const getSubCategoryById = async (req: Request, res: Response, next: Next
 
 export const createSubCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { name, description, categoryId } = req.body;
 
     // Verify parent category exists
@@ -88,6 +91,7 @@ export const createSubCategory = async (req: AuthRequest, res: Response, next: N
 
 export const updateSubCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const subCategory = await prisma.subCategory.findUnique({ where: { id: req.params.id } });
     if (!subCategory) return next(createError('SubCategory not found', 404));
 
@@ -132,6 +136,7 @@ export const updateSubCategory = async (req: AuthRequest, res: Response, next: N
 
 export const deleteSubCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const subCategory = await prisma.subCategory.findUnique({
       where: { id: req.params.id },
       include: { _count: { select: { products: true } } },

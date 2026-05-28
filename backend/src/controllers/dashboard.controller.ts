@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { StockStatus } from '@prisma/client';
 
-export const getDashboardStats = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getDashboardStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);

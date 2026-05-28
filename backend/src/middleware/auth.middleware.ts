@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../utils/prisma';
-import { Role } from '@prisma/client';
+import { Role, PrismaClient } from '@prisma/client';
+import { TenantRequest } from './tenant.middleware';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -10,10 +10,13 @@ export interface AuthRequest extends Request {
     role: Role;
     name: string;
   };
+  tenantId: string;
+  prisma: PrismaClient;
+  tenantConfig: any;
 }
 
 export const authenticate = async (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -31,6 +34,9 @@ export const authenticate = async (
       role: Role;
     };
 
+    // Use the tenant-specific prisma client from the request
+    const prisma = (req as TenantRequest).prisma;
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.id, isActive: true },
       select: { id: true, email: true, role: true, name: true },
@@ -41,7 +47,7 @@ export const authenticate = async (
       return;
     }
 
-    req.user = user;
+    (req as AuthRequest).user = user;
     next();
   } catch {
     res.status(401).json({ message: 'Invalid or expired token' });
@@ -49,8 +55,9 @@ export const authenticate = async (
 };
 
 export const authorize = (...roles: Role[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const authReq = req as AuthRequest;
+    if (!authReq.user || !roles.includes(authReq.user.role)) {
       res.status(403).json({ message: 'Insufficient permissions' });
       return;
     }

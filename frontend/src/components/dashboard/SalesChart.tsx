@@ -25,7 +25,7 @@ export default function SalesChart({ data }: { data: TrendPoint[] }) {
     labels: data.map((d) => d.date),
     datasets: [
       {
-        label: 'Revenue ($)',
+        label: 'Revenue (Rs.)',
         data: data.map((d) => d.revenue),
         borderColor: '#2563eb',
         backgroundColor: 'rgba(37, 99, 235, 0.1)',
@@ -44,7 +44,7 @@ export default function SalesChart({ data }: { data: TrendPoint[] }) {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (ctx: any) => '$' + Number(ctx.raw).toFixed(2),
+          label: (ctx: any) => 'Rs. ' + Number(ctx.raw).toFixed(2),
         },
       },
     },
@@ -52,7 +52,7 @@ export default function SalesChart({ data }: { data: TrendPoint[] }) {
       x: { grid: { display: false } },
       y: {
         grid: { color: '#f3f4f6' },
-        ticks: { callback: (v: any) => '$' + v },
+        ticks: { callback: (v: any) => 'Rs. ' + v },
       },
     },
   };

@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 
 export const getSalesReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { period = 'daily', startDate, endDate } = req.query;
 
     let start: Date;
@@ -92,8 +93,9 @@ export const getSalesReport = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-export const getInventoryReport = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getInventoryReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const products = await prisma.product.findMany({
       where: { isActive: true },
       include: { category: { select: { name: true } } },
@@ -128,6 +130,7 @@ export const getInventoryReport = async (_req: Request, res: Response, next: Nex
 
 export const getAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { page = '1', limit = '20', entity, action } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 

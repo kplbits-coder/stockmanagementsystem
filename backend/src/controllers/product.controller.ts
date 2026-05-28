@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { StockStatus } from '@prisma/client';
@@ -12,6 +12,7 @@ function computeStatus(quantity: number, minQuantity: number): StockStatus {
 
 export const getProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const {
       search,
       categoryId,
@@ -66,6 +67,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 
 export const getProductById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const product = await prisma.product.findUnique({
       where: { id: req.params.id },
       include: {
@@ -83,6 +85,7 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
 
 export const getProductByBarcode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const product = await prisma.product.findUnique({
       where: { barcode: req.params.barcode },
       include: {
@@ -99,6 +102,7 @@ export const getProductByBarcode = async (req: Request, res: Response, next: Nex
 
 export const createProduct = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const {
       name, description, sku, barcode, categoryId, subCategoryId,
       price, costPrice, quantity, minQuantity, unit, taxRate, imageUrl,
@@ -174,6 +178,7 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
 
 export const updateProduct = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const existing = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!existing) return next(createError('Product not found', 404));
 
@@ -255,6 +260,7 @@ export const updateProduct = async (req: AuthRequest, res: Response, next: NextF
 
 export const deleteProduct = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const product = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!product) return next(createError('Product not found', 404));
 
@@ -280,8 +286,9 @@ export const deleteProduct = async (req: AuthRequest, res: Response, next: NextF
   }
 };
 
-export const getLowStockProducts = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getLowStockProducts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const products = await prisma.product.findMany({
       where: {
         isActive: true,
@@ -301,6 +308,7 @@ export const getLowStockProducts = async (_req: Request, res: Response, next: Ne
 
 export const getStockMovements = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { page = '1', limit = '20' } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 

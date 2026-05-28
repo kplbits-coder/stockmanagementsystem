@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = req.body;
+    const prisma = db(req);
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) {
@@ -42,6 +43,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
 
 export const getMe = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
       select: { id: true, name: true, email: true, role: true, createdAt: true },
@@ -58,6 +60,7 @@ export const changePassword = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const prisma = db(req);
     const { currentPassword, newPassword } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id: req.user!.id } });

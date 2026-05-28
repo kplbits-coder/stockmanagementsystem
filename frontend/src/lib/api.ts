@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth.store';
+import { useTenantStore } from '@/store/tenant.store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -8,12 +9,26 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach token to every request
+// Attach token + tenant ID to every request
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
+  const tenantId = useTenantStore.getState().tenantId;
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (tenantId) config.headers['x-tenant-id'] = tenantId;
   return config;
 });
+
+// ─── Tenants ─────────────────────────────────────────────────────────────────
+export const tenantApi = {
+  getAll: async () => {
+    const res = await api.get('/tenants');
+    return res.data;
+  },
+  getConfig: async () => {
+    const res = await api.get('/tenant/config');
+    return res.data;
+  },
+};
 
 // Handle 401 globally
 api.interceptors.response.use(
@@ -221,6 +236,79 @@ export const userApi = {
   },
   delete: async (id: string) => {
     const res = await api.delete(`/users/${id}`);
+    return res.data;
+  },
+};
+
+// ─── Refrigerators (Scoopmandu) ──────────────────────────────────────────────
+export const refrigeratorApi = {
+  // Refrigerators
+  getAll: async (params?: any) => {
+    const res = await api.get('/refrigerators', { params });
+    return res.data;
+  },
+  getById: async (id: string) => {
+    const res = await api.get(`/refrigerators/${id}`);
+    return res.data;
+  },
+  create: async (data: any) => {
+    const res = await api.post('/refrigerators', data);
+    return res.data;
+  },
+  update: async ({ id, ...data }: any) => {
+    const res = await api.put(`/refrigerators/${id}`, data);
+    return res.data;
+  },
+  delete: async (id: string) => {
+    const res = await api.delete(`/refrigerators/${id}`);
+    return res.data;
+  },
+
+  // Shops
+  getShops: async (params?: any) => {
+    const res = await api.get('/refrigerators/shops/list', { params });
+    return res.data;
+  },
+  createShop: async (data: any) => {
+    const res = await api.post('/refrigerators/shops', data);
+    return res.data;
+  },
+  updateShop: async ({ id, ...data }: any) => {
+    const res = await api.put(`/refrigerators/shops/${id}`, data);
+    return res.data;
+  },
+  deleteShop: async (id: string) => {
+    const res = await api.delete(`/refrigerators/shops/${id}`);
+    return res.data;
+  },
+
+  // Assignments
+  getAssignments: async (params?: any) => {
+    const res = await api.get('/refrigerators/assignments/list', { params });
+    return res.data;
+  },
+  assign: async (data: any) => {
+    const res = await api.post('/refrigerators/assignments/assign', data);
+    return res.data;
+  },
+  transfer: async (data: any) => {
+    const res = await api.post('/refrigerators/assignments/transfer', data);
+    return res.data;
+  },
+  return: async (data: any) => {
+    const res = await api.post('/refrigerators/assignments/return', data);
+    return res.data;
+  },
+
+  // Dashboard
+  getDashboard: async () => {
+    const res = await api.get('/refrigerators/dashboard');
+    return res.data;
+  },
+
+  // Logs
+  getLogs: async (params?: any) => {
+    const res = await api.get('/refrigerators/logs', { params });
     return res.data;
   },
 };

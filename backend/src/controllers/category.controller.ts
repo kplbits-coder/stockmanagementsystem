@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '../utils/prisma';
+import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 
-export const getCategories = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const categories = await prisma.category.findMany({
       include: {
         _count: { select: { products: true } },
@@ -43,6 +44,7 @@ export const getCategories = async (_req: Request, res: Response, next: NextFunc
 
 export const getCategoryById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const category = await prisma.category.findUnique({
       where: { id: req.params.id },
       include: {
@@ -67,6 +69,7 @@ export const getCategoryById = async (req: Request, res: Response, next: NextFun
 
 export const createCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const { name, description } = req.body;
 
     const existing = await prisma.category.findUnique({ where: { name } });
@@ -96,6 +99,7 @@ export const createCategory = async (req: AuthRequest, res: Response, next: Next
 
 export const updateCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const category = await prisma.category.findUnique({ where: { id: req.params.id } });
     if (!category) return next(createError('Category not found', 404));
 
@@ -135,6 +139,7 @@ export const updateCategory = async (req: AuthRequest, res: Response, next: Next
 
 export const deleteCategory = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const prisma = db(req);
     const category = await prisma.category.findUnique({
       where: { id: req.params.id },
       include: { _count: { select: { products: true } } },

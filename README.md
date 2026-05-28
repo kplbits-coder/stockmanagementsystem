@@ -1,6 +1,10 @@
 # 📦 Stock Management System
 
-A modern, full-stack stock and inventory management system built with Next.js, Node.js, and PostgreSQL. Designed to help businesses manage inventory, categories, sub-categories, sales, payments, billing, and reporting efficiently with real-time stock updates.
+A modern, multi-tenant, full-stack stock and inventory management system built with Next.js, Node.js, and PostgreSQL. Each client (tenant) gets its own isolated database while sharing a single codebase. Supports client-specific features via feature flags.
+
+**Current Tenants:**
+- 🟣 **Scoopmandu** — Premium Ice Cream & Desserts (includes Refrigerator Tracking)
+- 🔵 **RKT Tradings** — Wholesale & Retail Trading
 
 ---
 
@@ -10,9 +14,11 @@ A modern, full-stack stock and inventory management system built with Next.js, N
 |-------|-----------|
 | Frontend | Next.js 14, Tailwind CSS, React Query, Zustand |
 | Backend | Node.js, Express, TypeScript |
-| Database | PostgreSQL |
+| Database | PostgreSQL (one DB per tenant) |
 | ORM | Prisma 5.22.0 |
-| Auth | JWT (Role-based) |
+| Auth | JWT (Role-based, per-tenant) |
+| Multi-Tenancy | Header-based (`x-tenant-id`) with per-tenant Prisma clients |
+| Currency | NPR (Nepali Rupees — Rs.) |
 | PDF | PDFKit |
 | Barcode | @ericblade/quagga2, JsBarcode |
 | Charts | Chart.js + react-chartjs-2 |
@@ -22,78 +28,100 @@ A modern, full-stack stock and inventory management system built with Next.js, N
 
 ---
 
+## 🏗️ Multi-Tenant Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Browser                                                     │
+│  ┌─────────────────┐                                        │
+│  │ Tenant Selector  │ → User picks "Scoopmandu"             │
+│  └────────┬────────┘                                        │
+│           │ stores tenantId in localStorage                  │
+│           ▼                                                  │
+│  ┌─────────────────┐                                        │
+│  │ Login Page       │ → Branded with tenant colors + PAN/VAT│
+│  └────────┬────────┘                                        │
+│           │ every API call sends: x-tenant-id: scoopmandu   │
+│           ▼                                                  │
+├───────────────────────────────────────────────────────────────
+│  Backend (single Express server)                             │
+│  ┌─────────────────┐                                        │
+│  │ Tenant Middleware│ → Resolves tenant from header          │
+│  └────────┬────────┘                                        │
+│           │ attaches correct PrismaClient to request         │
+│           ▼                                                  │
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │ scoopmandu_db   │    │ rkt_tradings_db │                │
+│  │ (PostgreSQL)    │    │ (PostgreSQL)    │                │
+│  └─────────────────┘    └─────────────────┘                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 📁 Project Structure
 
 ```
 stock-management/
 ├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma              # Database schema (9 models)
-│   │   └── seed.ts                    # Seed data (users, categories, products)
+│   │   ├── schema.prisma              # Shared schema (13 models)
+│   │   └── seed.ts                    # Tenant-aware seed (detects DB name)
+│   ├── scripts/
+│   │   └── setup-tenants.ts           # Push schema to all tenant DBs
 │   ├── src/
+│   │   ├── config/
+│   │   │   └── tenants.ts             # ★ Tenant registry (DB URLs, features, branding, PAN)
 │   │   ├── controllers/
 │   │   │   ├── auth.controller.ts
 │   │   │   ├── category.controller.ts
 │   │   │   ├── subcategory.controller.ts
 │   │   │   ├── dashboard.controller.ts
-│   │   │   ├── payment.controller.ts      ← NEW
+│   │   │   ├── payment.controller.ts
 │   │   │   ├── product.controller.ts
+│   │   │   ├── refrigerator.controller.ts  ← Scoopmandu only
 │   │   │   ├── report.controller.ts
 │   │   │   ├── sale.controller.ts
 │   │   │   └── user.controller.ts
 │   │   ├── middleware/
-│   │   │   ├── auth.middleware.ts         # JWT + role guard
+│   │   │   ├── auth.middleware.ts
+│   │   │   ├── tenant.middleware.ts    # ★ Resolves tenant, attaches PrismaClient
 │   │   │   ├── error.middleware.ts
 │   │   │   └── validate.middleware.ts
 │   │   ├── routes/
-│   │   │   ├── auth.routes.ts
-│   │   │   ├── category.routes.ts
-│   │   │   ├── subcategory.routes.ts
-│   │   │   ├── payment.routes.ts          ← NEW
-│   │   │   ├── product.routes.ts
-│   │   │   ├── sale.routes.ts
-│   │   │   ├── report.routes.ts
-│   │   │   ├── user.routes.ts
-│   │   │   └── dashboard.routes.ts
+│   │   │   └── refrigerator.routes.ts  # Feature-gated (403 for non-Scoopmandu)
 │   │   └── utils/
-│   │       ├── invoice.ts                 # PDFKit invoice (includes payment info)
-│   │       ├── logger.ts
-│   │       └── prisma.ts
+│   │       ├── prisma.ts              # Multi-tenant PrismaClient manager
+│   │       ├── request.ts             # db(req) helper
+│   │       ├── invoice.ts             # PDF with tenant branding + PAN/VAT
+│   │       └── logger.ts
 │   ├── .env
 │   └── package.json
 ├── frontend/
 │   └── src/
 │       ├── app/
-│       │   ├── (dashboard)/
-│       │   │   ├── dashboard/             # KPI dashboard
-│       │   │   ├── inventory/             # Product management + barcode + export
-│       │   │   ├── categories/            # Category + sub-category management
-│       │   │   ├── sales/                 # Sales & POS + payment method column
-│       │   │   ├── reports/               # Analytics + export (CSV/PDF)
-│       │   │   └── users/                 # User management
-│       │   └── login/
+│       │   ├── select-tenant/         # ★ Tenant selector page
+│       │   ├── login/                 # Branded per tenant + PAN/VAT
+│       │   └── (dashboard)/
+│       │       ├── dashboard/
+│       │       ├── inventory/
+│       │       ├── categories/
+│       │       ├── sales/             # Product grid POS (all items visible)
+│       │       ├── reports/
+│       │       ├── refrigerators/     # ★ Scoopmandu only (5 sub-pages)
+│       │       └── users/
 │       ├── components/
-│       │   ├── dashboard/                 # SalesChart, TopProducts, LowStockAlert, RecentSales
-│       │   ├── inventory/
-│       │   │   ├── ProductModal.tsx        # Add/edit product (with sub-category)
-│       │   │   ├── CategoryModal.tsx
-│       │   │   ├── SubCategoryModal.tsx
-│       │   │   ├── BarcodeModal.tsx        # Generate, print, download barcodes
-│       │   │   └── StockMovementModal.tsx
-│       │   ├── layout/                    # Sidebar, Header
-│       │   ├── reports/                   # SalesReportChart
+│       │   ├── refrigerators/         # RefrigeratorModal, ShopModal, AssignModal
 │       │   ├── sales/
-│       │   │   ├── NewSaleModal.tsx        # POS cart + payment method selector
-│       │   │   ├── BarcodeScanner.tsx
-│       │   │   └── SaleDetailModal.tsx     # Invoice view + payment details
-│       │   ├── ui/                        # LoadingSpinner, Pagination, ConfirmDialog
-│       │   └── users/                     # UserModal
+│       │   │   └── NewSaleModal.tsx   # Product grid + cart + payment
+│       │   └── ...
 │       ├── lib/
-│       │   ├── api.ts                     # Axios API client (all endpoints)
-│       │   ├── export.ts                  # CSV + PDF export utilities
-│       │   └── utils.ts
+│       │   ├── api.ts                 # Sends x-tenant-id header
+│       │   ├── export.ts             # CSV/PDF (Rs. currency)
+│       │   └── utils.ts             # formatCurrency → Rs.
 │       └── store/
-│           └── auth.store.ts
+│           ├── auth.store.ts
+│           └── tenant.store.ts
 ├── docker-compose.yml
 └── README.md
 ```
@@ -107,25 +135,38 @@ stock-management/
 - PostgreSQL 14+
 - npm
 
-### 1. Backend Setup
+### 1. Create Tenant Databases
+
+```sql
+psql -U postgres
+CREATE DATABASE scoopmandu_db;
+CREATE DATABASE rkt_tradings_db;
+\q
+```
+
+### 2. Backend Setup
 
 ```bash
 cd backend
-
-# Copy and configure environment
 cp .env.example .env
-# Edit .env — set your DATABASE_URL and JWT_SECRET
+# Edit .env — set your postgres password
 
 npm install
-npx prisma db push
+npm run setup:tenants          # Push schema to both DBs
 npx prisma generate
+
+# Seed Scoopmandu
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/scoopmandu_db?schema=public"
 npx prisma db seed
+
+# Seed RKT Tradings
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/rkt_tradings_db?schema=public"
+npx prisma db seed
+
 npm run dev
 ```
 
-> Backend runs on **http://localhost:5000**
-
-### 2. Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd frontend
@@ -134,123 +175,110 @@ npm install
 npm run dev
 ```
 
-> Frontend runs on **http://localhost:3000**
+### 4. Use the App
 
-### 3. Prisma Studio (optional)
-
-```bash
-cd backend
-npm run prisma:studio
-```
-
-> **Windows note:** Stop the backend before running `npx prisma generate` — the Prisma `.dll` engine file is locked while the server is running.
+1. Open http://localhost:3000
+2. Select tenant (Scoopmandu or RKT Tradings)
+3. Login with credentials shown on login page
 
 ---
 
-## 🐳 Docker (Full Stack)
+## 👤 Credentials (per tenant)
 
-```bash
-docker-compose up -d
-docker exec stock_backend npx ts-node prisma/seed.ts
-```
-
----
-
-## 👤 Default Credentials
-
-| Role | Email | Password | Access |
-|------|-------|----------|--------|
-| Admin | admin@stockms.com | admin123 | Full access |
-| Cashier | cashier@stockms.com | cashier123 | Sales + Inventory view |
-| Inventory Manager | manager@stockms.com | manager123 | Inventory + Categories + Reports |
+| Tenant | Role | Email | Password |
+|--------|------|-------|----------|
+| Scoopmandu | Admin | admin@scoopmandu.com | admin123 |
+| Scoopmandu | Cashier | cashier@scoopmandu.com | cashier123 |
+| Scoopmandu | Manager | manager@scoopmandu.com | manager123 |
+| RKT Tradings | Admin | admin@rkttradings.com | admin123 |
+| RKT Tradings | Cashier | cashier@rkttradings.com | cashier123 |
+| RKT Tradings | Manager | manager@rkttradings.com | manager123 |
 
 ---
 
 ## 🎯 Features
 
+### 🏢 Multi-Tenant System
+- ✅ Tenant selector page with branded cards
+- ✅ Per-tenant isolated PostgreSQL database
+- ✅ Header-based tenant resolution (`x-tenant-id`)
+- ✅ Per-tenant branding (colors, company name, tagline, PAN/VAT)
+- ✅ Per-tenant feature flags
+- ✅ Switch organization from sidebar
+- ✅ Auto-refresh tenant config on dashboard load
+
 ### 📦 Inventory Management
-- ✅ Add, edit, deactivate products (soft delete)
-- ✅ Assign category and optional sub-category per product
-- ✅ Real-time stock status — In Stock / Low Stock / Out of Stock
+- ✅ Add, edit, deactivate products
+- ✅ Category + optional sub-category
+- ✅ Real-time stock status (In Stock / Low Stock / Out of Stock)
 - ✅ Search and filter by name, SKU, barcode, category, status
-- ✅ Stock movement history per product (IN / OUT / ADJUSTMENT logs)
-- ✅ Low stock alerts with notification badge in header
-- ✅ Minimum quantity threshold per product
-- ✅ URL-based deep filtering (`/inventory?categoryId=xxx`)
-- ✅ Export inventory to CSV or PDF
+- ✅ Stock movement history (IN / OUT / ADJUSTMENT)
+- ✅ Low stock alerts with notification badge
+- ✅ Barcode generation, print, SVG download
+- ✅ Export to CSV or PDF
 
-### 🏷️ Category Management
-- ✅ Dedicated Categories page with expandable list layout
-- ✅ Add, edit, delete categories
-- ✅ Per-category stock summary (in / low / out counts)
-- ✅ "View in Inventory" deep-link per category
-- ✅ Prevents deletion of categories that have products
-- ✅ Audit logging on all changes
+### 🏷️ Category & Sub-Category Management
+- ✅ Expandable category list with inline sub-categories
+- ✅ Full CRUD with audit logging
+- ✅ Cascade delete, name uniqueness per category
 
-### 🗂️ Sub-Category Management
-- ✅ Optional sub-categories linked to a parent category
-- ✅ Add, edit, delete sub-categories inline from the Categories page
-- ✅ Expandable category rows show sub-categories with product counts
-- ✅ Sub-category dropdown in Product form — dynamically filtered by selected category
-- ✅ Validates sub-category belongs to selected category on backend
-- ✅ Cascade delete — deleting a category removes its sub-categories
-- ✅ Name uniqueness enforced per category
-
-### 💰 Sales Management
-- ✅ Cart-based POS interface with live product search
-- ✅ Automatic stock deduction on sale (DB transaction)
-- ✅ Insufficient stock prevention with clear error messages
-- ✅ Customer name and phone capture
-- ✅ Order-level discount support
-- ✅ Per-product tax rate calculation
-- ✅ Cancel sale with automatic stock restoration
-- ✅ Sales history with status filter, pagination, and payment method column
-- ✅ Export sales to CSV or PDF
+### 💰 Sales Management (POS)
+- ✅ **All products displayed in a clickable grid** — no search required
+- ✅ Click product to add to cart, click again to increase quantity
+- ✅ Products in cart highlighted with quantity badge
+- ✅ Category filter + text search for quick filtering
+- ✅ Automatic stock deduction (DB transaction)
+- ✅ Insufficient stock prevention
+- ✅ Customer info, discount, per-product tax
+- ✅ Cancel sale with stock restoration
+- ✅ Barcode scanner still available
+- ✅ Export to CSV or PDF
 
 ### 💳 Payment Module
-- ✅ **Cash** — amount received input with live change calculation, blocks submit if underpaid
-- ✅ **Cheque** — cheque number (required), bank name, account holder name fields; blue badge
-- ✅ **PhonePay** — transaction ID (required); purple badge
-- ✅ **eSewa** — transaction ID (required); teal badge
-- ✅ Payment status tracking — Paid / Partial / Pending / Failed
-- ✅ Payment details shown in invoice view and PDF (including bank name and account holder for cheque)
-- ✅ Payment method badge in sales list table (green=Cash, blue=Cheque, purple=PhonePay, teal=eSewa)
-- ✅ Payment summary API by method totals
-- ✅ Payment stored in dedicated `Payment` table linked 1:1 to `Sale`
-
-### 📷 Barcode Scanner
-- ✅ Camera-based scanning (@ericblade/quagga2)
-- ✅ Manual barcode entry fallback
-- ✅ USB barcode scanner support
-- ✅ Auto-add scanned product to cart
-- ✅ Barcode generation from SKU (EAN-13 with check digit)
-- ✅ Barcode display, print label, and SVG download per product
-- ✅ Save generated barcode back to product record
+- ✅ **Cash** — amount received + live change calculation
+- ✅ **Cheque** — cheque number, bank name, account holder name
+- ✅ **PhonePay** — transaction ID
+- ✅ **eSewa** — transaction ID
+- ✅ Payment status (Paid / Partial / Pending / Failed)
+- ✅ Payment details in invoice view and PDF
+- ✅ Payment method badges in sales list
 
 ### 🧾 Billing & Invoices
-- ✅ Professional PDF invoice generation (PDFKit, A4 layout)
-- ✅ Download invoice as PDF with auth-protected endpoint
-- ✅ Print invoice — isolated print view (sidebar/header excluded)
-- ✅ Invoice includes: product details, qty, unit price, tax %, totals, cashier, customer
-- ✅ Payment details section in invoice (method, status, amount paid, change, reference)
+- ✅ PDF invoice with tenant company name + PAN/VAT number
+- ✅ Currency in Nepali Rupees (Rs.)
+- ✅ Download + print (isolated print view)
+- ✅ Payment details section
 
 ### 📊 Dashboard & Reports
-- ✅ Real-time KPI dashboard (auto-refreshes every 30s)
-- ✅ Today's revenue, weekly revenue, monthly revenue
-- ✅ Total products, low stock count, out of stock count
-- ✅ 7-day sales trend line chart
-- ✅ Top 5 products by revenue
-- ✅ Recent 5 sales feed
-- ✅ Low stock alerts panel
-- ✅ Sales reports — daily / weekly / monthly / yearly
-- ✅ Inventory valuation report (cost value, retail value, potential profit)
-- ✅ Category-wise revenue breakdown (bar chart + table)
-- ✅ Export reports to CSV or PDF
+- ✅ Real-time KPIs (auto-refresh 30s)
+- ✅ Sales trend chart, top products, low stock alerts
+- ✅ Sales reports (daily/weekly/monthly/yearly)
+- ✅ Inventory valuation report
+- ✅ Category-wise revenue breakdown
+- ✅ All charts show Rs. currency
+- ✅ Export to CSV or PDF
 
-### 👥 User Management (Admin only)
-- ✅ Create, edit, deactivate users
-- ✅ Role-based access control — Admin / Cashier / Inventory Manager
-- ✅ Audit logs for all stock, category, and sub-category changes
+### 📷 Barcode Scanner
+- ✅ Camera scanning + manual entry + USB scanner
+- ✅ Barcode generation from SKU
+- ✅ Print label, SVG download
+
+### 🧊 Refrigerator Tracking (Scoopmandu Only)
+- ✅ Refrigerator master management (code, brand, model, capacity, serial number, status)
+- ✅ Shop/store management (name, code, address, contact, region)
+- ✅ Assign refrigerator to shop
+- ✅ Transfer refrigerator between shops
+- ✅ Return/retrieve refrigerator
+- ✅ Assignment history with full audit trail
+- ✅ Refrigerator tracking dashboard (stats, shop-wise count, recent activity)
+- ✅ Reports with CSV/PDF export
+- ✅ Activity logs (Created, Assigned, Transferred, Returned, Status Changed)
+- ✅ Feature-gated: hidden in UI + blocked at API level for non-Scoopmandu tenants
+- ✅ Status tracking: Available / Assigned / Under Maintenance / Inactive
+
+### 👥 User Management
+- ✅ Role-based access (Admin / Cashier / Inventory Manager)
+- ✅ Audit logs for all changes
 
 ---
 
@@ -263,116 +291,68 @@ docker exec stock_backend npx ts-node prisma/seed.ts
 | Add/Edit Products | ✅ | ❌ | ✅ |
 | Delete Products | ✅ | ❌ | ❌ |
 | Categories & Sub-Categories | ✅ | ❌ | ✅ |
-| Delete Categories | ✅ | ❌ | ❌ |
 | Create Sales | ✅ | ✅ | ❌ |
 | Cancel Sales | ✅ | ❌ | ❌ |
-| Update Payment | ✅ | ❌ | ❌ |
-| Reports | ✅ | ❌ | ✅ |
-| Payment Summary | ✅ | ❌ | ✅ || User Management | ✅ | ❌ | ❌ |
-| Audit Logs | ✅ | ❌ | ❌ |
+| Reports & Export | ✅ | ❌ | ✅ |
+| Refrigerators (Scoopmandu) | ✅ | ❌ | ✅ |
+| User Management | ✅ | ❌ | ❌ |
 
 ---
 
 ## 🔌 API Endpoints
 
-### Auth
+### Tenant (public)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/login` | Login, returns JWT |
-| GET | `/api/auth/me` | Get current user |
-| PUT | `/api/auth/change-password` | Change password |
+| GET | `/api/tenants` | List all tenants |
+| GET | `/api/tenant/config` | Current tenant config |
 
-### Products
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/products` | List with search, filter, pagination |
-| GET | `/api/products/low-stock` | Low & out-of-stock products |
-| GET | `/api/products/barcode/:barcode` | Lookup by barcode |
-| GET | `/api/products/:id` | Single product with movements |
-| GET | `/api/products/:id/movements` | Stock movement history |
-| POST | `/api/products` | Create product |
-| PUT | `/api/products/:id` | Update product |
-| DELETE | `/api/products/:id` | Deactivate product (soft delete) |
+### Auth, Products, Categories, Sub-Categories, Sales, Payments, Reports, Dashboard, Users
+> All standard CRUD endpoints — tenant resolved from `x-tenant-id` header.
 
-### Categories
+### Refrigerators (Scoopmandu only — 403 for others)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/categories` | All categories with sub-categories + stock summary |
-| GET | `/api/categories/:id` | Single category with products |
-| POST | `/api/categories` | Create category |
-| PUT | `/api/categories/:id` | Update category |
-| DELETE | `/api/categories/:id` | Delete (blocks if has products) |
-
-### Sub-Categories
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/subcategories` | All sub-categories (`?categoryId=` filter) |
-| GET | `/api/subcategories/:id` | Single sub-category with products |
-| POST | `/api/subcategories` | Create sub-category |
-| PUT | `/api/subcategories/:id` | Update sub-category |
-| DELETE | `/api/subcategories/:id` | Delete (blocks if has products) |
-
-### Sales
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/sales` | List with status/date filter, pagination |
-| GET | `/api/sales/:id` | Single sale with items + payment |
-| POST | `/api/sales` | Create sale + payment in one transaction |
-| PUT | `/api/sales/:id/cancel` | Cancel sale (restores stock) |
-| GET | `/api/sales/:id/invoice` | Download PDF invoice |
-
-### Payments ← NEW
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/payments/summary` | Revenue totals by payment method |
-| GET | `/api/payments/sale/:saleId` | Get payment for a sale |
-| PUT | `/api/payments/sale/:saleId` | Update payment details (Admin only) |
-
-### Reports
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/reports/sales?period=monthly` | Sales report |
-| GET | `/api/reports/inventory` | Inventory valuation report |
-| GET | `/api/reports/audit-logs` | Audit log history |
-
-### Dashboard
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/dashboard` | KPIs, trend data, top products, alerts |
-
-### Users (Admin only)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users` | All users |
-| POST | `/api/users` | Create user |
-| PUT | `/api/users/:id` | Update user / role |
-| DELETE | `/api/users/:id` | Deactivate user |
+| GET | `/api/refrigerators` | List with filters |
+| GET | `/api/refrigerators/dashboard` | Stats + shop-wise count |
+| GET | `/api/refrigerators/logs` | Activity logs |
+| GET | `/api/refrigerators/:id` | Single with history |
+| POST | `/api/refrigerators` | Create |
+| PUT | `/api/refrigerators/:id` | Update |
+| DELETE | `/api/refrigerators/:id` | Deactivate |
+| GET | `/api/refrigerators/shops/list` | All shops |
+| POST | `/api/refrigerators/shops` | Create shop |
+| PUT | `/api/refrigerators/shops/:id` | Update shop |
+| DELETE | `/api/refrigerators/shops/:id` | Deactivate shop |
+| GET | `/api/refrigerators/assignments/list` | Assignment history |
+| POST | `/api/refrigerators/assignments/assign` | Assign to shop |
+| POST | `/api/refrigerators/assignments/transfer` | Transfer between shops |
+| POST | `/api/refrigerators/assignments/return` | Return from shop |
 
 ---
 
-## 🗄️ Database Schema
+## 🗄️ Database Schema (per tenant)
 
 ```
-User          — id, name, email, password, role, isActive
-Category      — id, name, description
-SubCategory   — id, name, description, categoryId
-Product       — id, name, sku, barcode, categoryId, subCategoryId (optional),
-                price, costPrice, quantity, minQuantity, unit, status, taxRate, isActive
-Sale          — id, invoiceNo, customerName, customerPhone, userId,
-                subtotal, taxAmount, discount, total, status
-Payment       — id, saleId (unique), method (CASH/CHEQUE/PHONEPAY/ESEWA), status,
-                amountPaid, changeAmount, referenceNo, bankName, accountName, notes, paidAt
-SaleItem      — id, saleId, productId, quantity, unitPrice, taxRate, discount, total
-StockMovement — id, productId, type (IN/OUT/ADJUSTMENT), quantity,
-                previousQty, newQty, reason, reference
-AuditLog      — id, userId, action, entity, entityId, oldData, newData
-```
+User                    — id, name, email, password, role, isActive
+Category                — id, name, description
+SubCategory             — id, name, description, categoryId
+Product                 — id, name, sku, barcode, categoryId, subCategoryId,
+                          price, costPrice, quantity, minQuantity, unit, status, taxRate
+Sale                    — id, invoiceNo, customerName, customerPhone, userId,
+                          subtotal, taxAmount, discount, total, status
+Payment                 — id, saleId, method (CASH/CHEQUE/PHONEPAY/ESEWA), status,
+                          amountPaid, changeAmount, referenceNo, bankName, accountName
+SaleItem                — id, saleId, productId, quantity, unitPrice, taxRate, discount, total
+StockMovement           — id, productId, type, quantity, previousQty, newQty, reason
+AuditLog                — id, userId, action, entity, entityId, oldData, newData
 
-**Key constraints:**
-- `Payment` is 1:1 with `Sale` — created atomically in the same transaction
-- `SubCategory.name` is unique per category
-- Deleting a `Category` cascades to its `SubCategory` records
-- `Product.subCategoryId` is optional
+── Refrigerator Tracking (Scoopmandu) ──
+Refrigerator            — id, code, name, brand, model, capacity, serialNumber, status
+Shop                    — id, name, code, address, contactPerson, phone, region
+RefrigeratorAssignment  — id, refrigeratorId, shopId, assignedDate, returnedDate, status
+RefrigeratorLog         — id, refrigeratorId, action, previousShop, newShop, performedBy
+```
 
 ---
 
@@ -380,12 +360,15 @@ AuditLog      — id, userId, action, entity, entityId, oldData, newData
 
 ### Backend (`backend/.env`)
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/stock_management_db?schema=public"
 JWT_SECRET="your-secret-key"
 JWT_EXPIRES_IN="7d"
 PORT=5000
 NODE_ENV=development
 FRONTEND_URL="http://localhost:3000"
+
+DATABASE_URL="postgresql://postgres:password@localhost:5432/stock_management_db?schema=public"
+DATABASE_URL_SCOOPMANDU="postgresql://postgres:password@localhost:5432/scoopmandu_db?schema=public"
+DATABASE_URL_RKT="postgresql://postgres:password@localhost:5432/rkt_tradings_db?schema=public"
 ```
 
 ### Frontend (`frontend/.env.local`)
@@ -395,16 +378,46 @@ NEXT_PUBLIC_API_URL=http://localhost:3000/api
 
 ---
 
+## 🔧 Adding a New Tenant
+
+1. Add to `backend/src/config/tenants.ts`
+2. Add `DATABASE_URL_NEWCLIENT` to `.env`
+3. Create database: `CREATE DATABASE newclient_db;`
+4. Run `npm run setup:tenants`
+5. Seed: `$env:DATABASE_URL = "...newclient_db..."; npx prisma db seed`
+6. Restart backend — new tenant appears automatically
+
+---
+
+## 🎛️ Feature Flags
+
+```typescript
+// backend/src/config/tenants.ts
+features: {
+  barcode: true,
+  subCategories: true,
+  reports: true,
+  multiPayment: true,
+  refrigeratorTracking: true,  // Scoopmandu only
+}
+```
+
+Frontend checks: `tenant?.features?.refrigeratorTracking`
+Backend blocks: 403 response if feature flag is false
+
+---
+
 ## 📜 Available Scripts
 
 ### Backend
 ```bash
-npm run dev               # Start dev server with hot reload
-npm run build             # Compile TypeScript to dist/
-npm start                 # Run compiled build
+npm run dev               # Start dev server
+npm run build             # Compile TypeScript
+npm start                 # Run production build
+npm run setup:tenants     # Push schema to all tenant DBs
 npm run prisma:generate   # Regenerate Prisma client
-npm run prisma:studio     # Open Prisma Studio
-npm run prisma:seed       # Run seed script
+npm run prisma:studio     # Visual DB browser
+npm run prisma:seed       # Seed (uses DATABASE_URL)
 ```
 
 ### Frontend
@@ -420,8 +433,8 @@ npm run lint         # Run ESLint
 ## 🔄 After Schema Changes
 
 ```bash
-# Stop the backend server first (Windows — .dll file lock)
-npx prisma db push       # Apply schema to database
-npx prisma generate      # Regenerate Prisma client types
-npm run dev              # Restart backend
+# Stop backend first (Windows .dll lock)
+npx prisma generate
+npm run setup:tenants     # Push to ALL tenant DBs
+npm run dev
 ```
