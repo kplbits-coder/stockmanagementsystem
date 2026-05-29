@@ -1,0 +1,23 @@
+# Render deployment config
+# https://render.com
+services:
+  - type: web
+    name: stock-management-api
+    runtime: node
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_SCOOPMANDU
+        sync: false
+      - key: DATABASE_URL_RKT
+        sync: false
