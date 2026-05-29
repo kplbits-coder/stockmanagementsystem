@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function SaleDetailModal({ sale, onClose }: Props) {
-  const printRootRef = useRef<HTMLDivElement>(null);
+  const printRootRef = useRef<HTMLDivElement | null>(null);
   const { tenant } = useTenantStore();
 
   // Mount a hidden print-only div at body level so only invoice prints
