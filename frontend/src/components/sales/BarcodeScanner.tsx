@@ -36,7 +36,6 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
           Quagga.init(
             {
               inputStream: {
-                name: 'Live',
                 type: 'LiveStream',
                 target: scannerRef.current!,
                 constraints: {
@@ -44,7 +43,7 @@ export default function BarcodeScanner({ onDetected, onClose }: Props) {
                   height: { min: 240 },
                   facingMode: 'environment',
                 },
-              },
+              } as any,
               decoder: {
                 readers: [
                   'ean_reader',
