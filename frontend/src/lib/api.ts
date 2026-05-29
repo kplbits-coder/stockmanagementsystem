@@ -138,20 +138,30 @@ export const saleApi = {
   },
   downloadInvoice: (id: string) => {
     const token = useAuthStore.getState().token;
+    const tenantId = useTenantStore.getState().tenantId;
     const url = `${API_URL}/sales/${id}/invoice`;
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `invoice-${id}.pdf`);
-    // Use fetch with auth header
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.blob())
+    fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'x-tenant-id': tenantId || '',
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to download invoice');
+        return res.blob();
+      })
       .then((blob) => {
         const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
         link.href = objectUrl;
+        link.download = `invoice-${id}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(objectUrl);
+      })
+      .catch(() => {
+        alert('Failed to download invoice. Please try again.');
       });
   },
 };

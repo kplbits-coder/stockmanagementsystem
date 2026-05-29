@@ -3,6 +3,7 @@ import { db } from '../utils/request';
 import { createError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { generateInvoicePDF } from '../utils/invoice';
+import { generateRKTInvoicePDF } from '../utils/invoice-rkt';
 import { StockStatus } from '@prisma/client';
 
 function generateInvoiceNo(): string {
@@ -88,7 +89,8 @@ export const createSale = async (req: AuthRequest, res: Response, next: NextFunc
   try {
     const prisma = db(req);
     const {
-      customerName, customerPhone, items, discount = 0, notes,
+      customerName, customerPhone, customerPan, customerAddress,
+      items, discount = 0, notes,
       paymentMethod = 'CASH', amountPaid, referenceNo,
       bankName, accountName, paymentNotes,
     } = req.body;
@@ -151,6 +153,8 @@ export const createSale = async (req: AuthRequest, res: Response, next: NextFunc
           invoiceNo: generateInvoiceNo(),
           customerName: customerName || null,
           customerPhone: customerPhone || null,
+          customerPan: customerPan || null,
+          customerAddress: customerAddress || null,
           userId: req.user!.id,
           subtotal,
           taxAmount,
@@ -270,18 +274,59 @@ export const downloadInvoice = async (req: Request, res: Response, next: NextFun
   try {
     const prisma = db(req);
     const tenantConfig = (req as any).tenantConfig;
+    const tenantId = (req as any).tenantId;
     const sale = await prisma.sale.findUnique({
       where: { id: req.params.id },
       include: {
         user: { select: { name: true } },
         saleItems: {
-          include: { product: { select: { name: true } } },
+          include: { product: { select: { name: true, unit: true } } },
         },
         payment: true,
       },
     });
     if (!sale) return next(createError('Sale not found', 404));
 
+    // Use RKT-specific tax invoice template for rkt-tradings
+    if (tenantId === 'rkt-tradings') {
+      const subtotal = Number(sale.subtotal);
+      const discount = Number(sale.discount);
+      const taxableAmount = subtotal - discount;
+      const taxRate = 13;
+      const taxAmount = Number(sale.taxAmount);
+      const total = Number(sale.total);
+
+      generateRKTInvoicePDF(
+        {
+          companyName: tenantConfig?.branding?.companyName || 'RKT Tradings',
+          companyAddress: tenantConfig?.branding?.address || 'Kathmandu, Nepal',
+          companyPan: tenantConfig?.branding?.panNo || '',
+          invoiceNo: sale.invoiceNo,
+          date: sale.createdAt,
+          customerName: sale.customerName || 'Walk-in Customer',
+          customerAddress: sale.customerAddress || undefined,
+          customerPan: sale.customerPan || undefined,
+          paymentMethod: sale.payment?.method,
+          items: sale.saleItems.map((item) => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            unit: item.product.unit || 'pcs',
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+          })),
+          subtotal,
+          discount,
+          taxableAmount,
+          taxRate,
+          taxAmount,
+          total,
+        },
+        res
+      );
+      return;
+    }
+
+    // Default invoice template for other tenants
     generateInvoicePDF(
       {
         companyName: tenantConfig?.branding?.companyName || 'Stock Manager',

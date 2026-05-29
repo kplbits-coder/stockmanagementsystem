@@ -71,6 +71,7 @@ function loadTenants(): Record<string, TenantConfig> {
       primaryColor: '#1e40af', // blue
       companyName: 'RKT Tradings',
       tagline: 'Wholesale & Retail Trading',
+      address: 'Kathmandu, Nepal',
       panNo: '609876543',
     },
   };

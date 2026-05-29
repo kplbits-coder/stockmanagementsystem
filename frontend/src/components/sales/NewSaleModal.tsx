@@ -40,6 +40,8 @@ export default function NewSaleModal({ onClose, onSuccess }: Props) {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerPan, setCustomerPan] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [discount, setDiscount] = useState(0);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -162,6 +164,8 @@ export default function NewSaleModal({ onClose, onSuccess }: Props) {
     mutation.mutate({
       customerName: customerName || undefined,
       customerPhone: customerPhone || undefined,
+      customerPan: customerPan || undefined,
+      customerAddress: customerAddress || undefined,
       discount,
       items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       paymentMethod,
@@ -325,11 +329,21 @@ export default function NewSaleModal({ onClose, onSuccess }: Props) {
                   <input className="input-field text-sm" placeholder="Optional"
                     value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
                 </div>
-                <div className="w-24">
-                  <label className="block text-xs font-medium text-gray-600 mb-0.5">Discount</label>
-                  <input type="number" min="0" className="input-field text-sm"
-                    value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-600 mb-0.5">PAN No.</label>
+                  <input className="input-field text-sm" placeholder="Customer PAN"
+                    value={customerPan} onChange={(e) => setCustomerPan(e.target.value)} />
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-0.5">Address</label>
+                <input className="input-field text-sm" placeholder="Customer address"
+                  value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} />
+              </div>
+              <div className="w-full">
+                <label className="block text-xs font-medium text-gray-600 mb-0.5">Discount (Rs.)</label>
+                <input type="number" min="0" className="input-field text-sm"
+                  value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
               </div>
             </div>
 
