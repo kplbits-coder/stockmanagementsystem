@@ -250,6 +250,30 @@ export const userApi = {
   },
 };
 
+// ─── Cost Analysis ───────────────────────────────────────────────────────────
+export const costAnalysisApi = {
+  getOverview: async () => {
+    const res = await api.get('/cost-analysis/overview');
+    return res.data;
+  },
+  getProfitByProduct: async (params?: any) => {
+    const res = await api.get('/cost-analysis/profit-by-product', { params });
+    return res.data;
+  },
+  getProfitByCategory: async (params?: any) => {
+    const res = await api.get('/cost-analysis/profit-by-category', { params });
+    return res.data;
+  },
+  getDeadStock: async (params?: any) => {
+    const res = await api.get('/cost-analysis/dead-stock', { params });
+    return res.data;
+  },
+  getAbcAnalysis: async () => {
+    const res = await api.get('/cost-analysis/abc-analysis');
+    return res.data;
+  },
+};
+
 // ─── Refrigerators (Scoopmandu) ──────────────────────────────────────────────
 export const refrigeratorApi = {
   // Refrigerators

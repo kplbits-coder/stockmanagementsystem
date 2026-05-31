@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, BarChart2,
-  Users, LogOut, Package2, Tag, Thermometer,
+  Users, LogOut, Package2, Tag, Thermometer, TrendingDown,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { useTenantStore } from '@/store/tenant.store';
@@ -16,6 +16,7 @@ const navItems = [
   { href: '/categories',  label: 'Categories', icon: Tag,             roles: ['ADMIN', 'INVENTORY_MANAGER'] },
   { href: '/sales',       label: 'Sales',      icon: ShoppingCart,    roles: ['ADMIN', 'CASHIER'] },
   { href: '/reports',     label: 'Reports',    icon: BarChart2,       roles: ['ADMIN', 'INVENTORY_MANAGER'] },
+  { href: '/cost-analysis', label: 'Cost Analysis', icon: TrendingDown, roles: ['ADMIN', 'INVENTORY_MANAGER'] },
   { href: '/refrigerators', label: 'Refrigerators', icon: Thermometer, roles: ['ADMIN', 'INVENTORY_MANAGER'], feature: 'refrigeratorTracking' },
   { href: '/users',       label: 'Users',      icon: Users,           roles: ['ADMIN'] },
 ];

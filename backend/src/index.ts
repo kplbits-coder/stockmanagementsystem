@@ -15,6 +15,7 @@ import reportRoutes from './routes/report.routes';
 import userRoutes from './routes/user.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import refrigeratorRoutes from './routes/refrigerator.routes';
+import costAnalysisRoutes from './routes/cost-analysis.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { resolveTenant, TenantRequest } from './middleware/tenant.middleware';
 import { disconnectAll } from './utils/prisma';
@@ -98,6 +99,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/refrigerators', refrigeratorRoutes);
+app.use('/api/cost-analysis', costAnalysisRoutes);
 
 // Error handler
 app.use(errorHandler);
