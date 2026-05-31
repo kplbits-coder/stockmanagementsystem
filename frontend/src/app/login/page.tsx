@@ -141,30 +141,11 @@ export default function LoginPage() {
               Switch organization
             </button>
           </div>
-
-          {/* Demo credentials */}
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs font-medium text-gray-500 mb-2">Demo Credentials:</p>
-            <div className="space-y-1 text-xs text-gray-600">
-              {tenant?.id === 'scoopmandu' ? (
-                <>
-                  <p><span className="font-medium">Admin:</span> admin@scoopmandu.com / admin123</p>
-                  <p><span className="font-medium">Cashier:</span> cashier@scoopmandu.com / cashier123</p>
-                  <p><span className="font-medium">Manager:</span> manager@scoopmandu.com / manager123</p>
-                </>
-              ) : tenant?.id === 'rkt-tradings' ? (
-                <>
-                  <p><span className="font-medium">Admin:</span> admin@rkttradings.com / admin123</p>
-                  <p><span className="font-medium">Cashier:</span> cashier@rkttradings.com / cashier123</p>
-                  <p><span className="font-medium">Manager:</span> manager@rkttradings.com / manager123</p>
-                </>
-              ) : (
-                <>
-                  <p><span className="font-medium">Admin:</span> admin@stockms.com / admin123</p>
-                  <p><span className="font-medium">Cashier:</span> cashier@stockms.com / cashier123</p>
-                  <p><span className="font-medium">Manager:</span> manager@stockms.com / manager123</p>
-                </>
-              )}
+        </div>
+      </div>
+    </div>
+  );
+}
             </div>
           </div>
         </div>
